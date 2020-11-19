@@ -1,3 +1,0 @@
-C:/Users/cesme/CLionProjects/cse426/cmake-build-debug/CMakeFiles/cse426.dir
-C:/Users/cesme/CLionProjects/cse426/cmake-build-debug/CMakeFiles/edit_cache.dir
-C:/Users/cesme/CLionProjects/cse426/cmake-build-debug/CMakeFiles/rebuild_cache.dir

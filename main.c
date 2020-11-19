@@ -46,15 +46,16 @@ int gameEndsWithNoValidMoveRule(int turn);
 
 void gameEndsWithTurnLimitReached();
 
-void getTargetPieceLocationFromUserAndMakeMove(char *pieceCoordinate, char *targetPieceCoordinate,
-                                               int pieceRow, int pieceColumn, int *targetPieceRow,
-                                               int *targetPieceColumn);
+void getTargetPieceLocationFromUserAndMakeMove(char *pieceCoordinate, char *targetCoordinate,
+                                               int pieceRow, int pieceColumn, int *targetRow,
+                                               int *targetColumn);
 
 void getPieceToMoveFromUser(char *pieceCoordinate, int *pieceRow, int *pieceColumn);
 
-int isValidMove(int pieceRow, int pieceColumn, int targetPieceRow, int targetPieceColumn);
+int isValidMove(int pieceRow, int pieceColumn, int targetRow, int targetColumn);
 
-int main() {
+int main()
+{
     initializeEmptyBoard();
     srand(time(NULL));
     configureBoardParameters();
@@ -66,19 +67,25 @@ int main() {
 }
 
 // Main game loop
-void startGameLoop() {
+void startGameLoop()
+{
     int currentTurnCount = 0;
     int playerTurn = player % 2;
-    while (currentTurnCount < turnCount * 2) {
-        if (gameEndsWithNoValidMoveRule(playerTurn)) {
+    while (currentTurnCount < turnCount * 2)
+    {
+        if (gameEndsWithNoValidMoveRule(playerTurn))
+        {
             return;
         }
 
-        if (playerTurn) {
+        if (playerTurn)
+        {
             printf("TURN #%d\n", currentTurnCount / 2 + 1);
             playerMove();
             --playerTurn;
-        } else {
+        }
+        else
+        {
             botMove();
             ++playerTurn;
         }
@@ -89,52 +96,67 @@ void startGameLoop() {
     gameEndsWithTurnLimitReached();
 }
 
-void gameEndsWithTurnLimitReached() {
-    if (validMoveableSpaceCount(playerPiece) > validMoveableSpaceCount(botPiece)) {
+void gameEndsWithTurnLimitReached()
+{
+    if (validMoveableSpaceCount(playerPiece) > validMoveableSpaceCount(botPiece))
+    {
         printf("You won!\n");
         return;
-    } else {
+    }
+    else
+    {
         printf("You lost!\n");
         return;
     }
 }
 
-int gameEndsWithNoValidMoveRule(int playerTurn) {
-    if (!isPlayerAbleToMakeMove(playerPiece) && playerTurn) {
+int gameEndsWithNoValidMoveRule(int playerTurn)
+{
+    if (!isPlayerAbleToMakeMove(playerPiece) && playerTurn)
+    {
         printf("You lost!\n");
         return 1;
-    } else if (!isPlayerAbleToMakeMove(botPiece) && !playerTurn) {
+    }
+    else if (!isPlayerAbleToMakeMove(botPiece) && !playerTurn)
+    {
         printf("You won!\n");
         return 1;
-    } else {
+    }
+    else
+    {
         return 0;
     }
 }
 
 //TODO: implement
-int validMoveableSpaceCount(char piece) {
+int validMoveableSpaceCount(char piece)
+{
     return 0;
 }
 
 //TODO: implement
-int isPlayerAbleToMakeMove(char piece) {
+int isPlayerAbleToMakeMove(char piece)
+{
     return 1;
 }
 
-void playerMove() {
-    char pieceCoordinate[3], targetPieceCoordinate[3];
-    int pieceRow, pieceColumn, targetPieceRow, targetPieceColumn;
+void playerMove()
+{
+    char pieceCoordinate[3], targetCoordinate[3];
+    int pieceRow, pieceColumn, targetRow, targetColumn;
 
     getPieceToMoveFromUser(pieceCoordinate, &pieceRow, &pieceColumn);
-    getTargetPieceLocationFromUserAndMakeMove(pieceCoordinate, targetPieceCoordinate, pieceRow, pieceColumn,
-                                              &targetPieceRow, &targetPieceColumn);
+    getTargetPieceLocationFromUserAndMakeMove(pieceCoordinate, targetCoordinate, pieceRow, pieceColumn,
+                                              &targetRow, &targetColumn);
 
-    printf("Player moves the piece at %s to %s", pieceCoordinate, targetPieceCoordinate);
+    printf("Player moves the piece at %s to %s", pieceCoordinate, targetCoordinate);
 }
 
-void getPieceToMoveFromUser(char *pieceCoordinate, int *pieceRow, int *pieceColumn) {
+void getPieceToMoveFromUser(char *pieceCoordinate, int *pieceRow, int *pieceColumn)
+{
     int invalidInput = 1;
-    while (invalidInput) {
+    while (invalidInput)
+    {
         flush();
         printf("Choose piece to move: ");
         scanf("%s", pieceCoordinate);
@@ -142,59 +164,71 @@ void getPieceToMoveFromUser(char *pieceCoordinate, int *pieceRow, int *pieceColu
         (*pieceRow) = pieceCoordinate[0] - 'a';
         (*pieceColumn) = pieceCoordinate[1] - '0' - 1;
 
-        if (board[(*pieceRow)][(*pieceColumn)] != playerPiece) {
+        if (board[(*pieceRow)][(*pieceColumn)] != playerPiece)
+        {
             printf("You don't have a piece at that location! Please try again!\n");
-        } else {
+        }
+        else
+        {
             invalidInput = 0;
         }
     }
 }
 
-void getTargetPieceLocationFromUserAndMakeMove(char *pieceCoordinate, char *targetPieceCoordinate,
-                                               int pieceRow, int pieceColumn, int *targetPieceRow,
-                                               int *targetPieceColumn) {
+void getTargetPieceLocationFromUserAndMakeMove(char *pieceCoordinate, char *targetCoordinate,
+                                               int pieceRow, int pieceColumn, int *targetRow,
+                                               int *targetColumn)
+{
     int invalidInput = 1;
-    while (invalidInput) {
+    while (invalidInput)
+    {
         flush();
         printf("Choose the new position for %s: ", pieceCoordinate);
-        scanf("%s", targetPieceCoordinate);
+        scanf("%s", targetCoordinate);
 
-        (*targetPieceRow) = targetPieceCoordinate[0] - 'a';
-        (*targetPieceColumn) = targetPieceCoordinate[1] - '0' - 1;
+        (*targetRow) = targetCoordinate[0] - 'a';
+        (*targetColumn) = targetCoordinate[1] - '0' - 1;
 
-        if (isValidMove(pieceRow, pieceColumn, (*targetPieceRow), (*targetPieceColumn))) {
+        if (isValidMove(pieceRow, pieceColumn, (*targetRow), (*targetColumn)))
+        {
             board[pieceRow][pieceColumn] = ' ';
-            board[(*targetPieceRow)][(*targetPieceColumn)] = playerPiece;
+            board[(*targetRow)][(*targetColumn)] = playerPiece;
             invalidInput = 0;
-        } else {
+        }
+        else
+        {
             printf("That is not a valid square! Try vertical and horizontal neighbours with no pieces!\n");
         }
     }
 }
 
-int isValidMove(int pieceRow, int pieceColumn, int targetPieceRow, int targetPieceColumn) {
-    return (((pieceRow + 1 == targetPieceRow || pieceRow - 1 == targetPieceRow) &&
-             (pieceColumn == targetPieceColumn)) ||
-            ((pieceColumn + 1 == targetPieceColumn || pieceColumn - 1 == targetPieceColumn) &&
-             (pieceRow == targetPieceRow)))
-           && board[targetPieceRow][targetPieceColumn] == ' ';
+int isValidMove(int pieceRow, int pieceColumn, int targetRow, int targetColumn)
+{
+    return (((pieceRow + 1 == targetRow || pieceRow - 1 == targetRow) &&
+             (pieceColumn == targetColumn)) ||
+            ((pieceColumn + 1 == targetColumn || pieceColumn - 1 == targetColumn) &&
+             (pieceRow == targetRow))) &&
+           board[targetRow][targetColumn] == ' ';
 }
 
-
 //TODO: implement
-void botMove() {
-    char pieceCoordinate[3] = "a1", targetPieceCoordinate[3] = "a1";// TODO: dont overlook
-    printf("Bot moves the piece at %s to %s", pieceCoordinate, targetPieceCoordinate);
+void botMove()
+{
+    char pieceCoordinate[3] = "a1", targetCoordinate[3] = "a1"; // TODO: dont overlook
+    printf("Bot moves the piece at %s to %s", pieceCoordinate, targetCoordinate);
 }
 
 // Board Printer
-void printBoard() {
+void printBoard()
+{
     printf("\n   1 2 3 4 5 6 7 \n");
-    for (int i = 0; i < 7; ++i) {
+    for (int i = 0; i < 7; ++i)
+    {
         char rowNameList[7] = {'a', 'b', 'c', 'd', 'e', 'f', 'g'};
         printf("%c |", rowNameList[i]);
 
-        for (int j = 0; j < 7; ++j) {
+        for (int j = 0; j < 7; ++j)
+        {
             printf("%c|", board[i][j]);
         }
         printf("\n");
@@ -202,7 +236,8 @@ void printBoard() {
 }
 
 // Get initial game configuration from the user
-void configureBoardParameters() {
+void configureBoardParameters()
+{
     printf("Please enter how many piece each player will get(min 1, max 24): ");
     scanf("%d", &pieceCount);
 
@@ -210,29 +245,36 @@ void configureBoardParameters() {
     scanf("%d", &turnCount);
 }
 
-void initializePieces() {
+void initializePieces()
+{
     char isRandomPlacement;
     flush();
     printf("Do you want the locations of the pieces randomized? (y/n): ");
     scanf("%c", &isRandomPlacement);
 
-    if (isRandomPlacement == 'y') {
+    if (isRandomPlacement == 'y')
+    {
         putPiecesToRandomCoordinates(PLAYER_1_PIECE);
         putPiecesToRandomCoordinates(PLAYER_2_PIECE);
-    } else if (isRandomPlacement == 'n') {
+    }
+    else if (isRandomPlacement == 'n')
+    {
         putPiecesToUserDefinedCoordinates();
     }
 }
 
 // Put given player's all pieces to board matrix
-void putPiecesToRandomCoordinates(char piece) {
+void putPiecesToRandomCoordinates(char piece)
+{
     int currentPieceCount = 0;
 
-    while (currentPieceCount < pieceCount) {
+    while (currentPieceCount < pieceCount)
+    {
         int i = rand() % 7;
         int j = rand() % 7;
 
-        if (board[i][j] == ' ') {
+        if (board[i][j] == ' ')
+        {
             board[i][j] = piece;
             currentPieceCount++;
         }
@@ -240,13 +282,16 @@ void putPiecesToRandomCoordinates(char piece) {
 }
 
 // Interact with user and fill the board with pieces
-void putPiecesToUserDefinedCoordinates() {
+void putPiecesToUserDefinedCoordinates()
+{
     int currentPieceCount = 0;
     char piece = PLAYER_1_PIECE;
     char playerName[] = "Player1";
 
-    while (currentPieceCount < pieceCount * 2) {
-        if (currentPieceCount == pieceCount) {
+    while (currentPieceCount < pieceCount * 2)
+    {
+        if (currentPieceCount == pieceCount)
+        {
             piece = PLAYER_2_PIECE;
             strcpy(playerName, "Player2");
         }
@@ -259,16 +304,20 @@ void putPiecesToUserDefinedCoordinates() {
         int i = pieceCoordinate[0] - 'a';
         int j = pieceCoordinate[1] - '0' - 1;
 
-        if (board[i][j] == ' ') {
+        if (board[i][j] == ' ')
+        {
             board[i][j] = piece;
             currentPieceCount++;
-        } else {
+        }
+        else
+        {
             printf("This coordinate is occupied by another piece or does not exist!\n");
         }
     }
 }
 
-void selectPlayer() {
+void selectPlayer()
+{
     printf("This is how the board looks like: ");
     printBoard();
     printf("Do you want to play as Player1(%c) or Player2(%c)? (1/2): ", PLAYER_1_PIECE, PLAYER_2_PIECE);
@@ -277,17 +326,21 @@ void selectPlayer() {
     botPiece = (player == 1) ? PLAYER_2_PIECE : PLAYER_1_PIECE;
 }
 
-void initializeEmptyBoard() {
-    for (int i = 0; i < 7; ++i) {
-        for (int j = 0; j < 7; ++j) {
+void initializeEmptyBoard()
+{
+    for (int i = 0; i < 7; ++i)
+    {
+        for (int j = 0; j < 7; ++j)
+        {
             board[i][j] = ' ';
         }
     }
 }
 
 // Function that empties the buffer of stdin to avoid bugs during scanf reads
-void flush() {
+void flush()
+{
     int c;
-    while ((c = getchar()) != '\n' && c != EOF);
+    while ((c = getchar()) != '\n' && c != EOF)
+        ;
 }
-
