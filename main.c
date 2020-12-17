@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,6 +7,7 @@
 // Global Constants
 const char PLAYER_1_PIECE = 'x';
 const char PLAYER_2_PIECE = 'o';
+const int MAX_DEPTH = 7;
 
 // Global Variables
 char board[7][7];
@@ -13,7 +15,14 @@ int player;
 char playerPiece;
 char botPiece;
 int pieceCount;
-int turnCount;
+int turnLimit;
+struct Move {
+    int pieceI;
+    int pieceJ;
+    int targetI;
+    int targetJ;
+    struct Move *next;
+};
 
 // Function Definitions
 void printBoard();
@@ -25,7 +34,7 @@ void initializeEmptyBoard();
 void selectPlayer();
 void flush();
 void startGameLoop();
-void botMove();
+void botMove(int currentTurnCount);
 void playerMove();
 int isPlayerAbleToMakeMove(char piece);
 int validMoveableSpaceCount(char piece);
@@ -40,6 +49,16 @@ void getPieceToMoveFromUser(char *pieceCoordinate, int *pieceRow,
                             int *pieceColumn);
 int isValidMove(int pieceRow, int pieceColumn, int targetRow, int targetColumn);
 int isAlreadyCounted(int validMoveableSpace[50], int i, int j);
+struct Move *getPossibleMoves(char piece);
+void pushMove(struct Move **move, int pieceI, int pieceJ, int targetI,
+              int targetJ);
+void applyMove(struct Move *move);
+void undoMove(struct Move *move);
+char *convertIndexesToCoordinate(int i, int j);
+int minimax(int depth, int maximizingPlayer, int playerTurn, int alpha,
+            int beta);
+int staticEval();
+void freeList(struct Move *head);
 
 int main() {
     initializeEmptyBoard();
@@ -56,7 +75,7 @@ int main() {
 void startGameLoop() {
     int currentTurnCount = 0;
     int playerTurn = player % 2;
-    while (currentTurnCount < turnCount * 2) {
+    while (currentTurnCount < turnLimit * 2) {
         if (gameEndsWithNoValidMoveRule(playerTurn)) {
             return;
         }
@@ -66,7 +85,7 @@ void startGameLoop() {
             playerMove();
             --playerTurn;
         } else {
-            botMove();
+            botMove(currentTurnCount);
             ++playerTurn;
         }
         ++currentTurnCount;
@@ -216,8 +235,7 @@ void getTargetPieceLocationFromUserAndMakeMove(char *pieceCoordinate,
         } else {
             printf(
                 "That is not a valid square! Try vertical and horizontal "
-                "neighbours "
-                "with no pieces!\n");
+                "neighbours with no pieces!\n");
         }
     }
 }
@@ -232,12 +250,148 @@ int isValidMove(int pieceRow, int pieceColumn, int targetRow,
            board[targetRow][targetColumn] == ' ';
 }
 
-// TODO: implement
-void botMove() {
-    char pieceCoordinate[3] = "a1",
-         targetCoordinate[3] = "a1";  // TODO: dont overlook
-    printf("Bot moves the piece at %s to %s", pieceCoordinate,
-           targetCoordinate);
+void botMove(int currentTurnCount) {
+    struct Move *possibleMove = getPossibleMoves(botPiece);
+    struct Move *bestMove;
+    int score;
+    int maximizingPlayer = (player == 1) ? 0 : 1;
+    int bestScore = maximizingPlayer ? INT_MIN : INT_MAX;
+    int depth = (turnLimit - currentTurnCount / 2 < MAX_DEPTH)
+                    ? (turnLimit - currentTurnCount / 2)
+                    : MAX_DEPTH;
+
+    while (possibleMove != NULL) {
+        applyMove(possibleMove);
+        score = minimax(depth, !maximizingPlayer, 1, INT_MIN, INT_MAX);
+        undoMove(possibleMove);
+
+        if ((maximizingPlayer && (score > bestScore)) ||
+            (!maximizingPlayer && (score < bestScore))) {
+            bestScore = score;
+            bestMove = possibleMove;
+        }
+
+        possibleMove = possibleMove->next;
+    }
+
+    applyMove(bestMove);
+
+    printf("Bot moves the piece at %s to %s",
+           convertIndexesToCoordinate(bestMove->pieceI, bestMove->pieceJ),
+           convertIndexesToCoordinate(bestMove->targetI, bestMove->targetJ));
+    freeList(possibleMove);
+}
+
+int minimax(int depth, int maximizingPlayer, int playerTurn, int alpha,
+            int beta) {
+    if (depth == 0 || gameEndsWithNoValidMoveRule(playerTurn)) {
+        return staticEval();
+    }
+
+    char piece = playerTurn ? playerPiece : botPiece;
+    struct Move *possibleMove = getPossibleMoves(piece);
+    if (maximizingPlayer) {
+        int maxEval = INT_MIN;
+        while (possibleMove != NULL) {
+            applyMove(possibleMove);
+            int eval = minimax(depth - 1, 0, !playerTurn, alpha, beta);
+            undoMove(possibleMove);
+
+            if (eval > maxEval) maxEval = eval;
+            if (eval > alpha) alpha = eval;
+            if (beta <= alpha) break;
+
+            possibleMove = possibleMove->next;
+        }
+
+        freeList(possibleMove);
+        return maxEval;
+    } else {
+        int minEval = INT_MAX;
+        while (possibleMove != NULL) {
+            applyMove(possibleMove);
+            int eval = minimax(depth - 1, 1, !playerTurn, alpha, beta);
+            undoMove(possibleMove);
+
+            if (eval < minEval) minEval = eval;
+            if (eval < beta) beta = eval;
+            if (beta <= alpha) break;
+
+            possibleMove = possibleMove->next;
+        }
+
+        freeList(possibleMove);
+        return minEval;
+    }
+}
+
+int staticEval() {
+    return validMoveableSpaceCount(PLAYER_1_PIECE) -
+           validMoveableSpaceCount(PLAYER_2_PIECE);
+}
+
+struct Move *getPossibleMoves(char piece) {
+    struct Move *head = NULL;
+
+    for (int i = 0; i < 7; ++i) {
+        for (int j = 0; j < 7; ++j) {
+            if (board[i][j] == piece) {
+                if (i - 1 != -1 && board[i - 1][j] == ' ') {
+                    pushMove(&head, i, j, i - 1, j);
+                }
+                if (i + 1 != 7 && board[i + 1][j] == ' ') {
+                    pushMove(&head, i, j, i + 1, j);
+                }
+                if (j - 1 != -1 && board[i][j - 1] == ' ') {
+                    pushMove(&head, i, j, i, j - 1);
+                }
+                if (j + 1 != 7 && board[i][j + 1] == ' ') {
+                    pushMove(&head, i, j, i, j + 1);
+                }
+            }
+        }
+    }
+    return head;
+}
+
+void pushMove(struct Move **head, int pieceI, int pieceJ, int targetI,
+              int targetJ) {
+    struct Move *move = (struct Move *)calloc(1, sizeof(struct Move));
+
+    move->pieceI = pieceI;
+    move->pieceJ = pieceJ;
+    move->targetI = targetI;
+    move->targetJ = targetJ;
+    move->next = *head;
+    *head = move;
+}
+
+void applyMove(struct Move *move) {
+    board[move->targetI][move->targetJ] = board[move->pieceI][move->pieceJ];
+    board[move->pieceI][move->pieceJ] = ' ';
+}
+
+void undoMove(struct Move *move) {
+    board[move->pieceI][move->pieceJ] = board[move->targetI][move->targetJ];
+    board[move->targetI][move->targetJ] = ' ';
+}
+
+char *convertIndexesToCoordinate(int i, int j) {
+    char *coordinate = malloc(sizeof(char) * 3);
+    coordinate[0] = i + 'a';
+    coordinate[1] = j + '0' + 1;
+    coordinate[2] = '\0';
+    return coordinate;
+}
+
+void freeList(struct Move *head) {
+    struct Move *tmp;
+
+    while (head != NULL) {
+        tmp = head;
+        head = head->next;
+        free(tmp);
+    }
 }
 
 // Board Printer
@@ -260,7 +414,7 @@ void configureBoardParameters() {
     scanf("%d", &pieceCount);
 
     printf("Please enter turn limit for the game(min 1): ");
-    scanf("%d", &turnCount);
+    scanf("%d", &turnLimit);
 }
 
 void initializePieces() {
@@ -307,7 +461,7 @@ void putPiecesToUserDefinedCoordinates() {
         char pieceCoordinate[3];
         flush();
         printf("Please enter coordinate of piece #%d for %s: ",
-               (currentPieceCount % 5) + 1, playerName);
+               (currentPieceCount % pieceCount) + 1, playerName);
         scanf("%s", pieceCoordinate);
 
         int i = pieceCoordinate[0] - 'a';
